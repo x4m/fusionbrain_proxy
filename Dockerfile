@@ -24,6 +24,7 @@ EXPOSE 8000
 
 # Устанавливаем переменные окружения
 ENV PYTHONUNBUFFERED=1
+ENV LOG_LEVEL=INFO
 
 # Запускаем приложение
 CMD ["python", "main.py"] 
