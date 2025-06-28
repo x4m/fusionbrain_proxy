@@ -41,9 +41,38 @@ python main.py
 ```
 
 ### Продакшн режим
+
+#### С Gunicorn
 ```bash
 # Для HTTPS в продакшн используйте reverse proxy (nginx/apache)
 gunicorn -w 4 -b 0.0.0.0:8000 main:app
+```
+
+#### С Docker
+```bash
+# Сборка и запуск
+docker-compose up -d
+
+# Или напрямую с Docker
+docker build -t fusionbrain-proxy .
+docker run -d -p 8000:8000 --name fusionbrain-proxy fusionbrain-proxy
+```
+
+#### Развертывание на удаленном сервере
+```bash
+# 1. Клонируем репозиторий
+git clone <your-repo-url>
+cd hrenator
+
+# 2. Запускаем с Docker (рекомендуется)
+docker-compose up -d
+
+# 3. Или устанавливаем зависимости и запускаем напрямую
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+./generate_ssl.sh
+python main.py
 ```
 
 **Доступные адреса:**
