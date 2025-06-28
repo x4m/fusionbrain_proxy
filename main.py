@@ -104,6 +104,9 @@ def process_response_data(response_data):
         data = json.loads(response_data)
         logger.debug("Ответ успешно разобран как JSON")
         
+        # Флаг - нужна ли обработка
+        needs_processing = False
+        
         # Проверяем наличие поля files в result
         if isinstance(data, dict) and 'result' in data and isinstance(data['result'], dict):
             if 'files' in data['result'] and isinstance(data['result']['files'], list):
@@ -119,27 +122,39 @@ def process_response_data(response_data):
                         converted_files.append(converted_file)
                         if converted_file != file_data:
                             logger.info(f"✅ Файл {idx + 1} успешно конвертирован")
+                            needs_processing = True
                         else:
                             logger.warning(f"⚠️ Файл {idx + 1} не был конвертирован (возможно ошибка)")
                     else:
                         logger.debug(f"📋 Файл {idx + 1} не является строкой, пропускаем")
                         converted_files.append(file_data)
                 
-                data['result']['files'] = converted_files
-                logger.info(f"🎯 Обработка завершена: {files_count} файл(ов)")
+                if needs_processing:
+                    data['result']['files'] = converted_files
+                    logger.info(f"🎯 Обработка завершена: {files_count} файл(ов)")
+                else:
+                    logger.debug("Файлы не требовали конвертации, возвращаем оригинальный ответ")
             else:
                 logger.debug("Поле 'files' не найдено или не является списком")
         else:
             logger.debug("Структура ответа не содержит 'result.files'")
         
-        processed_response = json.dumps(data)
         end_time = time.time()
         processing_time = end_time - start_time
         
-        perf_logger.info(f"Время обработки ответа: {processing_time:.3f}s")
-        logger.debug(f"Размер обработанного ответа: {len(processed_response)} символов")
-        
-        return processed_response
+        if needs_processing:
+            # Только если была конвертация - пересериализуем JSON
+            processed_response = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
+            logger.debug(f"JSON пересериализован после конвертации")
+            logger.debug(f"Размер обработанного ответа: {len(processed_response)} символов")
+            perf_logger.info(f"Время обработки ответа: {processing_time:.3f}s")
+            return processed_response
+        else:
+            # Если конвертация не нужна - возвращаем оригинал
+            logger.debug("Конвертация не требуется, возвращаем оригинальный ответ")
+            logger.debug(f"Размер оригинального ответа: {len(response_data)} символов")
+            perf_logger.info(f"Время анализа ответа: {processing_time:.3f}s")
+            return response_data
         
     except json.JSONDecodeError as e:
         logger.debug(f"Ответ не является JSON: {str(e)[:100]}...")
