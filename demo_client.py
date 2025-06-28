@@ -9,22 +9,36 @@ from PIL import Image
 import io
 
 # URL нашего прокси-сервера
-PROXY_URL = "http://localhost:8000"
+PROXY_HTTP_URL = "http://localhost:8000"
+PROXY_HTTPS_URL = "https://localhost:8000"
 
 def test_health():
     """
     Тестирует health check endpoint
     """
     print("🔍 Тестирование health check...")
+    
+    # Тестируем HTTP
     try:
-        response = requests.get(f"{PROXY_URL}/health")
+        response = requests.get(f"{PROXY_HTTP_URL}/health")
         if response.status_code == 200:
             data = response.json()
-            print(f"✅ Сервер работает: {data}")
+            print(f"✅ HTTP сервер работает: {data}")
         else:
-            print(f"❌ Ошибка: {response.status_code}")
+            print(f"❌ HTTP ошибка: {response.status_code}")
     except Exception as e:
-        print(f"❌ Ошибка при обращении к серверу: {e}")
+        print(f"❌ Ошибка при обращении к HTTP серверу: {e}")
+    
+    # Тестируем HTTPS (игнорируем SSL ошибки для самоподписанного сертификата)
+    try:
+        response = requests.get(f"{PROXY_HTTPS_URL}/health", verify=False)
+        if response.status_code == 200:
+            data = response.json()
+            print(f"✅ HTTPS сервер работает: {data}")
+        else:
+            print(f"❌ HTTPS ошибка: {response.status_code}")
+    except Exception as e:
+        print(f"❌ Ошибка при обращении к HTTPS серверу: {e}")
 
 def create_mock_api_response():
     """
@@ -122,7 +136,7 @@ def test_proxy_endpoint():
     try:
         # Пытаемся обратиться к несуществующему endpoint
         # Это покажет, как прокси пытается обратиться к внешнему API
-        response = requests.get(f"{PROXY_URL}/test/endpoint", timeout=5)
+        response = requests.get(f"{PROXY_HTTP_URL}/test/endpoint", timeout=5)
         print(f"📡 Ответ прокси: статус {response.status_code}")
         if response.headers.get('content-type', '').startswith('application/json'):
             try:

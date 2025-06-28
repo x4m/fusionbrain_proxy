@@ -180,4 +180,24 @@ def health_check():
     return jsonify({"status": "healthy", "service": "FusionBrain API Proxy"})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000, debug=False) 
+    import ssl
+    import os
+    
+    # Проверяем наличие SSL сертификатов
+    cert_file = 'cert.pem'
+    key_file = 'key.pem'
+    
+    if os.path.exists(cert_file) and os.path.exists(key_file):
+        # Запускаем с HTTPS
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.load_cert_chain(cert_file, key_file)
+        
+        logger.info("🔒 Запуск сервера с поддержкой HTTPS на порту 8000")
+        logger.info("📋 HTTP:  http://localhost:8000")
+        logger.info("🔐 HTTPS: https://localhost:8000")
+        
+        app.run(host='0.0.0.0', port=8000, debug=False, ssl_context=context)
+    else:
+        logger.warning("⚠️  SSL сертификаты не найдены, запуск только HTTP")
+        logger.info("📋 HTTP: http://localhost:8000")
+        app.run(host='0.0.0.0', port=8000, debug=False) 
