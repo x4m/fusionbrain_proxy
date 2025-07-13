@@ -211,10 +211,26 @@ def proxy(path):
             data = request.get_json()
             data_size = len(json.dumps(data)) if data else 0
             logger.info(f"📄 JSON данные: {data_size} символов")
+            
+            # Логируем тело запроса в DEBUG режиме
+            if logger.isEnabledFor(logging.DEBUG) and data:
+                request_body = json.dumps(data, ensure_ascii=False, indent=2)
+                max_request_log_size = 2000
+                if len(request_body) <= max_request_log_size:
+                    logger.debug(f"📤 Тело JSON запроса: {request_body}")
+                else:
+                    logger.debug(f"📤 Тело JSON запроса (первые {max_request_log_size} символов): {request_body[:max_request_log_size]}...")
         else:
             data = request.get_data()
             data_size = len(data) if data else 0
             logger.info(f"📄 Бинарные данные: {data_size} байт")
+            
+            # Логируем бинарные данные в DEBUG режиме (только размер и тип)
+            if logger.isEnabledFor(logging.DEBUG) and data:
+                content_type = request.headers.get('Content-Type', 'unknown')
+                logger.debug(f"📤 Бинарное тело запроса: {data_size} байт, Content-Type: {content_type}")
+                if data_size <= 200:  # Только маленькие бинарные данные
+                    logger.debug(f"📤 Содержимое (hex): {data.hex()}")
     
     try:
         logger.info(f"🚀 Отправляем {request.method} запрос на {target_url}")
@@ -258,12 +274,38 @@ def proxy(path):
         # Обрабатываем ответ
         response_data = response.text
         
+        # Логируем полное тело ответа в DEBUG режиме
+        if logger.isEnabledFor(logging.DEBUG):
+            max_log_size = 5000  # Максимальный размер для логирования
+            if len(response_data) <= max_log_size:
+                logger.debug(f"📄 Полное тело ответа: {response_data}")
+            else:
+                logger.debug(f"📄 Тело ответа (первые {max_log_size} символов): {response_data[:max_log_size]}...")
+                logger.debug(f"📄 Тело ответа (последние 500 символов): ...{response_data[-500:]}")
+            
+            # Логируем заголовки ответа
+            logger.debug("📋 Заголовки ответа:")
+            for header_name, header_value in response.headers.items():
+                logger.debug(f"   {header_name}: {header_value}")
+        
         # Проверяем Content-Type на JSON
         content_type = response.headers.get('content-type', '')
         if 'application/json' in content_type.lower():
             logger.info("🔄 Обрабатываем JSON ответ")
             # Обрабатываем JSON ответ
             processed_response = process_response_data(response_data)
+            
+            # Логируем обработанный ответ в DEBUG режиме если он изменился
+            if logger.isEnabledFor(logging.DEBUG) and processed_response != response_data:
+                logger.debug("🔄 Ответ был изменен после обработки")
+                max_processed_log_size = 5000
+                if len(processed_response) <= max_processed_log_size:
+                    logger.debug(f"📄 Обработанный ответ: {processed_response}")
+                else:
+                    logger.debug(f"📄 Обработанный ответ (первые {max_processed_log_size} символов): {processed_response[:max_processed_log_size]}...")
+                    logger.debug(f"📄 Обработанный ответ (последние 500 символов): ...{processed_response[-500:]}")
+            elif logger.isEnabledFor(logging.DEBUG):
+                logger.debug("🔄 Ответ не изменился после обработки")
         else:
             logger.debug(f"📄 Ответ не JSON (Content-Type: {content_type}), возвращаем как есть")
             processed_response = response_data
